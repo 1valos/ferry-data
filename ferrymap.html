@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ferry Map</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ─────────────────────────────────────────────
+       SCOPE: everything is inside .fm-root so this
+       page's styles never clash with your website.
+    ───────────────────────────────────────────── */
+    .fm-root * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .fm-root {
+      --teal   : #1d9e75;
+      --amber  : #f0a500;
+      --bg     : #0a0f1e;
+      --panel  : rgba(10,15,30,0.95);
+      --border : rgba(255,255,255,0.1);
+      --text   : #e8eaf0;
+      --muted  : #7a8399;
+      --subtle : #cdd0da;
+
+      position: relative;
+      width: 100%;
+      height: 600px;          /* ← change this to suit your layout */
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+    }
+
+    /* map fills the container */
+    .fm-root #fm-map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .leaflet-container { background: #0d1b2a !important; }
+
+    /* ── toolbar ── */
+    .fm-toolbar {
+      position: absolute;
+      top: 12px; left: 12px; right: 12px;
+      display: flex; align-items: center; gap: 8px;
+      z-index: 800;
+      pointer-events: none;
+    }
+
+    .fm-search-wrap { position: relative; pointer-events: all; }
+
+    .fm-search {
+      width: 200px;
+      padding: 8px 13px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      backdrop-filter: blur(8px);
+    }
+    .fm-search::placeholder { color: var(--muted); }
+    .fm-search:focus { border-color: var(--teal); }
+
+    .fm-suggestions {
+      position: absolute;
+      top: calc(100% + 4px); left: 0;
+      width: 220px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+      z-index: 900;
+    }
+
+    .fm-suggestion {
+      padding: 8px 13px;
+      font-size: 13px;
+      color: var(--subtle);
+      cursor: pointer;
+    }
+    .fm-suggestion:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    .fm-badge {
+      margin-left: auto;
+      pointer-events: none;
+      font-size: 11px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      background: rgba(29,158,117,0.12);
+      color: var(--teal);
+      border: 1px solid rgba(29,158,117,0.28);
+      white-space: nowrap;
+    }
+
+    /* ── side panel ── */
+    .fm-panel {
+      position: absolute;
+      top: 56px; left: 12px;
+      width: 240px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      z-index: 800;
+      backdrop-filter: blur(8px);
+      max-height: calc(100% - 80px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .fm-panel-title {
+      font-size: 14px; font-weight: 600;
+      color: var(--text); margin-bottom: 3px;
+    }
+
+    .fm-panel-hint {
+      font-size: 11px; color: var(--muted); line-height: 1.4;
+      margin-bottom: 10px; flex-shrink: 0;
+    }
+
+    .fm-conn-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .fm-conn-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .fm-conn-list li:last-child { border-bottom: none; }
+    .fm-conn-list li:hover .fm-conn-name { color: var(--teal); }
+
+    .fm-conn-name { color: var(--subtle); }
+
+    .fm-conn-price {
+      font-size: 11px; font-weight: 600;
+      color: var(--amber);
+      background: rgba(240,165,0,0.1);
+      padding: 2px 7px; border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .fm-conn-noprice { font-size: 11px; color: var(--muted); }
+
+    /* ── port dot markers ── */
+    .fm-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--teal);
+      border: 2px solid rgba(255,255,255,0.4);
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+    .fm-dot:hover, .fm-dot.active {
+      background: #fff; border-color: var(--teal); transform: scale(1.5);
+    }
+    .fm-dot.connected { background: var(--amber); border-color: rgba(240,165,0,0.4); }
+
+    /* ── price bubbles ── */
+    .fm-price-bubble {
+      background: rgba(10,15,30,0.9);
+      border: 1px solid rgba(240,165,0,0.45);
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 11px; font-weight: 600;
+      color: var(--amber);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* ── footer bar ── */
+    .fm-footer {
+      position: absolute;
+      bottom: 8px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10,15,30,0.82);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 10px; color: var(--muted);
+      z-index: 800; pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ── loading overlay ── */
+    .fm-loading {
+      position: absolute; inset: 0;
+      background: rgba(10,15,30,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2000;
+      color: var(--teal); font-size: 14px; gap: 10px;
+    }
+    .fm-loading.hidden { display: none; }
+
+    .fm-spinner {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(29,158,117,0.25);
+      border-top-color: var(--teal);
+      animation: fm-spin 0.7s linear infinite;
+    }
+    @keyframes fm-spin { to { transform: rotate(360deg); } }
+
+    .fm-error {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; z-index: 2000;
+      color: var(--muted); font-size: 13px; display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║  DROP THIS ENTIRE <div class="fm-root"> BLOCK INTO ANY  ║
+  ║  PAGE ON YOUR WEBSITE.  Nothing else is needed.         ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
+<div class="fm-root">
+
+  <div id="fm-map"></div>
+
+  <!-- Loading -->
+  <div class="fm-loading" id="fm-loading">
+    <div class="fm-spinner"></div>
+    Loading ferry data…
+  </div>
+
+  <!-- Error -->
+  <div class="fm-error" id="fm-error">
+    <span style="font-size:28px">⚓</span>
+    <span id="fm-err-msg">Could not load ferry data.</span>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="fm-toolbar">
+    <div class="fm-search-wrap">
+      <input class="fm-search" id="fm-search" type="text"
+             placeholder="Search port…" autocomplete="off" />
+      <div class="fm-suggestions" id="fm-suggestions"></div>
+    </div>
+    <div class="fm-badge" id="fm-badge">Loading…</div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="fm-panel" id="fm-panel">
+    <div class="fm-panel-title" id="fm-panel-title">Ferry routes</div>
+    <div class="fm-panel-hint"  id="fm-panel-hint">
+      Click a port on the map to see its connections and indicative prices.
+    </div>
+    <ul class="fm-conn-list" id="fm-conn-list"></ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="fm-footer" id="fm-footer">Prices indicative · updated nightly</div>
+
+</div>
+<!-- end .fm-root -->
+
+
+<script>
+(function () {
+  // ═══════════════════════════════════════════════════════════
+  //  ⚙️  CONFIGURATION — edit these two lines
+  // ═══════════════════════════════════════════════════════════
+
+  // URL to your routes.json on GitHub (raw content URL)
+  // Format: https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/data/routes.json
+  const DATA_URL = 'https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/data/routes.json';
+
+  // Map starting position and zoom (lat, lon, zoom)
+  const MAP_CENTER = [37.5, 24.0];   // Greece / Aegean Sea
+  const MAP_ZOOM   = 6;
+
+  // ═══════════════════════════════════════════════════════════
+
+  const $ = id => document.getElementById(id);
+
+  // ── Map init ────────────────────────────────────────────────
+  const map = L.map('fm-map', {
+    center     : MAP_CENTER,
+    zoom       : MAP_ZOOM,
+    zoomControl: false
+  });
+
+  L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 14 }
+  ).addTo(map);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  // ── State ───────────────────────────────────────────────────
+  let allPorts    = [];
+  let connData    = {};       // { portName: [{destination, minPrice, ...}] }
+  let markers     = {};       // portName → L.Marker
+  let lines       = [];
+  let pricePins   = [];
+
+  // ── Helpers ─────────────────────────────────────────────────
+  function makeDot(cls = '') {
+    const el = document.createElement('div');
+    el.className = 'fm-dot' + (cls ? ' ' + cls : '');
+    return el;
+  }
+
+  function icon(html, anchor = [0, 0]) {
+    return L.divIcon({ html, className: '', iconSize: [0, 0], iconAnchor: anchor });
+  }
+
+  function fmtPrice(val, cur = 'EUR') {
+    const syms = { EUR: '€', USD: '$', GBP: '£' };
+    const n = parseFloat(val);
+    return isNaN(n) ? String(val) : (syms[cur] ?? cur) + Math.round(n);
+  }
+
+  function clearSelection() {
+    lines.forEach(l => map.removeLayer(l));
+    pricePins.forEach(p => map.removeLayer(p));
+    lines = []; pricePins = [];
+    document.querySelectorAll('.fm-dot').forEach(d =>
+      d.classList.remove('active', 'connected'));
+  }
+
+  // ── Select a port ────────────────────────────────────────────
+  function selectPort(port) {
+    clearSelection();
+
+    const dotEl = markers[port.name]?._icon?.querySelector('.fm-dot');
+    if (dotEl) dotEl.classList.add('active');
+
+    const conns = connData[port.name] ?? [];
+
+    $('fm-panel-title').textContent = port.name;
+    $('fm-panel-hint').textContent  =
+      conns.length ? `${conns.length} direct connection${conns.length > 1 ? 's' : ''}` : 'No connections found.';
+
+    const list = $('fm-conn-list');
+    list.innerHTML = '';
+
+    conns.forEach(conn => {
+      const destName = conn.destination ?? conn.destinationName ?? '';
+      const dest     = allPorts.find(p => p.name === destName);
+      const price    = conn.minPrice ?? conn.price ?? conn.indicativePrice ?? null;
+      const cur      = conn.currency ?? 'EUR';
+
+      // Draw route line
+      if (dest?.lat && dest?.lon) {
+        lines.push(
+          L.polyline([[port.lat, port.lon], [dest.lat, dest.lon]], {
+            color: '#1d9e75', weight: 1.5, opacity: 0.45, dashArray: '5 5'
+          }).addTo(map)
+        );
+
+        // Price bubble
+        if (price != null) {
+          pricePins.push(
+            L.marker([dest.lat, dest.lon], {
+              icon: icon(`<div class="fm-price-bubble">from ${fmtPrice(price, cur)}</div>`, [0, -10]),
+              zIndexOffset: 500
+            }).addTo(map)
+          );
+        }
+
+        // Highlight connected dot
+        const dEl = markers[dest.name]?._icon?.querySelector('.fm-dot');
+        if (dEl) dEl.classList.add('connected');
+      }
+
+      // Panel row
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="fm-conn-name">${destName}</span>
+        ${price != null
+          ? `<span class="fm-conn-price">from ${fmtPrice(price, cur)}</span>`
+          : `<span class="fm-conn-noprice">see prices</span>`}
+      `;
+      li.onclick = () => {
+        if (dest) map.flyTo([dest.lat, dest.lon], 9, { duration: 0.9 });
+      };
+      list.appendChild(li);
+    });
+  }
+
+  // ── Render port dots ─────────────────────────────────────────
+  function renderPorts() {
+    allPorts.forEach(port => {
+      if (!port.lat || !port.lon) return;
+
+      const el = makeDot();
+      el.title = port.name;
+
+      const m = L.marker([port.lat, port.lon], {
+        icon: L.divIcon({ html: el, className: '', iconSize: [9, 9], iconAnchor: [4.5, 4.5] })
+      }).addTo(map);
+
+      m.on('click', () => selectPort(port));
+      markers[port.name] = m;
+    });
+  }
+
+  // ── Load data ─────────────────────────────────────────────────
+  async function load() {
+    try {
+      const res = await fetch(DATA_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data  = await res.json();
+      allPorts    = data.ports ?? [];
+      connData    = data.connections ?? {};
+
+      const d = new Date(data.fetchedAt);
+      $('fm-badge').textContent  = `${allPorts.length} ports`;
+      $('fm-footer').textContent =
+        `Prices indicative · updated ${d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
+
+      renderPorts();
+      $('fm-loading').classList.add('hidden');
+
+    } catch (err) {
+      $('fm-loading').classList.add('hidden');
+      $('fm-err-msg').textContent = `Could not load ferry data: ${err.message}`;
+      $('fm-error').style.display = 'flex';
+      console.error('[FerryMap]', err);
+    }
+  }
+
+  // ── Search ────────────────────────────────────────────────────
+  const searchEl  = $('fm-search');
+  const suggestEl = $('fm-suggestions');
+
+  searchEl.addEventListener('input', () => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (q.length < 2) { suggestEl.style.display = 'none'; return; }
+
+    const hits = allPorts.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!hits.length) { suggestEl.style.display = 'none'; return; }
+
+    suggestEl.innerHTML = hits.map(p =>
+      `<div class="fm-suggestion" data-n="${p.name}">${p.name}</div>`
+    ).join('');
+    suggestEl.style.display = 'block';
+  });
+
+  suggestEl.addEventListener('click', e => {
+    const name = e.target.dataset.n;
+    if (!name) return;
+    const port = allPorts.find(p => p.name === name);
+    if (!port) return;
+    searchEl.value = name;
+    suggestEl.style.display = 'none';
+    map.flyTo([port.lat, port.lon], 9, { duration: 1 });
+    selectPort(port);
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#fm-search') && !e.target.closest('#fm-suggestions'))
+      suggestEl.style.display = 'none';
+  });
+
+  // ── Boot ──────────────────────────────────────────────────────
+  load();
+})();
+</script>
+
+</body>
+</html>
