@@ -3,328 +3,556 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ferry Map</title>
+  <title>Ferry Routes</title>
 
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    /* ─────────────────────────────────────────────
-       SCOPE: everything is inside .fm-root so this
-       page's styles never clash with your website.
-    ───────────────────────────────────────────── */
-    .fm-root * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    .fm-root {
-      --teal   : #1d9e75;
-      --amber  : #f0a500;
-      --bg     : #0a0f1e;
-      --panel  : rgba(10,15,30,0.95);
-      --border : rgba(255,255,255,0.1);
-      --text   : #e8eaf0;
-      --muted  : #7a8399;
-      --subtle : #cdd0da;
-
-      position: relative;
-      width: 100%;
-      height: 600px;          /* ← change this to suit your layout */
-      border-radius: 12px;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
+    :root {
+      --ink     : #0b0f1a;
+      --ink2    : #111827;
+      --surface : rgba(11,15,26,0.92);
+      --glass   : rgba(255,255,255,0.04);
+      --border  : rgba(255,255,255,0.07);
+      --border2 : rgba(255,255,255,0.12);
+      --text    : #f0f2f8;
+      --muted   : #6b7494;
+      --subtle  : #9da5c0;
+      --teal    : #00d4a0;
+      --teal2   : #00b389;
+      --amber   : #ffb340;
+      --amber2  : #e69c20;
+      --blue    : #4f9eff;
+      --red     : #ff5f5f;
+      --font-h  : 'Syne', sans-serif;
+      --font-b  : 'DM Sans', sans-serif;
+      --radius  : 14px;
+      --radius-s: 8px;
+      --shadow  : 0 8px 32px rgba(0,0,0,0.5);
+      --shadow-s: 0 4px 16px rgba(0,0,0,0.3);
     }
 
-    /* map fills the container */
-    .fm-root #fm-map {
-      width: 100%;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
       height: 100%;
-    }
-
-    .leaflet-container { background: #0d1b2a !important; }
-
-    /* ── toolbar ── */
-    .fm-toolbar {
-      position: absolute;
-      top: 12px; left: 12px; right: 12px;
-      display: flex; align-items: center; gap: 8px;
-      z-index: 800;
-      pointer-events: none;
-    }
-
-    .fm-search-wrap { position: relative; pointer-events: all; }
-
-    .fm-search {
-      width: 200px;
-      padding: 8px 13px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      background: var(--ink);
       color: var(--text);
-      font-size: 13px;
-      outline: none;
-      backdrop-filter: blur(8px);
-    }
-    .fm-search::placeholder { color: var(--muted); }
-    .fm-search:focus { border-color: var(--teal); }
-
-    .fm-suggestions {
-      position: absolute;
-      top: calc(100% + 4px); left: 0;
-      width: 220px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      font-family: var(--font-b);
       overflow: hidden;
-      display: none;
-      z-index: 900;
     }
 
-    .fm-suggestion {
-      padding: 8px 13px;
-      font-size: 13px;
-      color: var(--subtle);
-      cursor: pointer;
-    }
-    .fm-suggestion:hover { background: rgba(255,255,255,0.06); color: var(--text); }
-
-    .fm-badge {
-      margin-left: auto;
-      pointer-events: none;
-      font-size: 11px;
-      padding: 5px 11px;
-      border-radius: 20px;
-      background: rgba(29,158,117,0.12);
-      color: var(--teal);
-      border: 1px solid rgba(29,158,117,0.28);
-      white-space: nowrap;
-    }
-
-    /* ── side panel ── */
-    .fm-panel {
-      position: absolute;
-      top: 56px; left: 12px;
-      width: 240px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px;
-      z-index: 800;
-      backdrop-filter: blur(8px);
-      max-height: calc(100% - 80px);
+    /* ── Layout ── */
+    .app {
       display: flex;
       flex-direction: column;
+      height: 100vh;
+      position: relative;
     }
 
-    .fm-panel-title {
-      font-size: 14px; font-weight: 600;
-      color: var(--text); margin-bottom: 3px;
-    }
-
-    .fm-panel-hint {
-      font-size: 11px; color: var(--muted); line-height: 1.4;
-      margin-bottom: 10px; flex-shrink: 0;
-    }
-
-    .fm-conn-list {
-      list-style: none;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .fm-conn-list li {
+    /* ── Topbar ── */
+    .topbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 60px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 7px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .fm-conn-list li:last-child { border-bottom: none; }
-    .fm-conn-list li:hover .fm-conn-name { color: var(--teal); }
-
-    .fm-conn-name { color: var(--subtle); }
-
-    .fm-conn-price {
-      font-size: 11px; font-weight: 600;
-      color: var(--amber);
-      background: rgba(240,165,0,0.1);
-      padding: 2px 7px; border-radius: 4px;
-      white-space: nowrap;
-    }
-
-    .fm-conn-noprice { font-size: 11px; color: var(--muted); }
-
-    /* ── port dot markers ── */
-    .fm-dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: var(--teal);
-      border: 2px solid rgba(255,255,255,0.4);
-      cursor: pointer;
-      transition: transform 0.12s;
-    }
-    .fm-dot:hover, .fm-dot.active {
-      background: #fff; border-color: var(--teal); transform: scale(1.5);
-    }
-    .fm-dot.connected { background: var(--amber); border-color: rgba(240,165,0,0.4); }
-
-    /* ── price bubbles ── */
-    .fm-price-bubble {
-      background: rgba(10,15,30,0.9);
-      border: 1px solid rgba(240,165,0,0.45);
-      border-radius: 5px;
-      padding: 2px 7px;
-      font-size: 11px; font-weight: 600;
-      color: var(--amber);
-      white-space: nowrap;
+      padding: 0 20px;
+      gap: 12px;
+      z-index: 900;
+      background: linear-gradient(to bottom, rgba(11,15,26,0.98) 70%, transparent);
       pointer-events: none;
     }
 
-    /* ── footer bar ── */
-    .fm-footer {
+    .topbar > * { pointer-events: all; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(0,212,160,0.3);
+    }
+
+    .brand-name {
+      font-family: var(--font-h);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Search */
+    .search-wrap {
+      position: relative;
+      margin-left: auto;
+    }
+
+    .search-icon {
       position: absolute;
-      bottom: 8px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(10,15,30,0.82);
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .search {
+      width: 220px;
+      padding: 8px 12px 8px 36px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-s);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-b);
+      outline: none;
+      backdrop-filter: blur(20px);
+      transition: border-color 0.2s, width 0.3s;
+    }
+    .search::placeholder { color: var(--muted); }
+    .search:focus {
+      border-color: var(--teal);
+      width: 260px;
+      box-shadow: 0 0 0 3px rgba(0,212,160,0.1);
+    }
+
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      width: 260px;
+      background: var(--ink2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: none;
+      z-index: 1000;
+      box-shadow: var(--shadow);
+    }
+
+    .suggestion {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: 13px;
+    }
+    .suggestion:hover { background: var(--glass); }
+    .suggestion-code {
+      font-family: var(--font-h);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      background: rgba(0,212,160,0.1);
+      border-radius: 4px;
+      padding: 2px 6px;
+      min-width: 40px;
+      text-align: center;
+    }
+    .suggestion-name { color: var(--subtle); }
+
+    /* Stats pill */
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 10px; color: var(--muted);
-      z-index: 800; pointer-events: none;
+      font-size: 12px;
+      color: var(--muted);
+      backdrop-filter: blur(20px);
+    }
+    .stat-pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 6px var(--teal);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.5; transform:scale(0.8); }
+    }
+
+    /* ── Map ── */
+    #map {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+    .leaflet-container { background: #060a14 !important; }
+    .leaflet-control-zoom a {
+      background: var(--ink2) !important;
+      color: var(--subtle) !important;
+      border-color: var(--border2) !important;
+      font-family: var(--font-h) !important;
+    }
+    .leaflet-control-zoom a:hover { color: var(--text) !important; }
+
+    /* ── Port dots ── */
+    .fm-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 1.5px solid rgba(0,212,160,0.3);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .fm-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: rgba(0,212,160,0.08);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .fm-dot:hover::after, .fm-dot.active::after { opacity: 1; }
+    .fm-dot:hover, .fm-dot.active {
+      transform: scale(1.8);
+      box-shadow: 0 0 12px rgba(0,212,160,0.6);
+      background: #fff;
+      border-color: var(--teal);
+    }
+    .fm-dot.connected {
+      background: var(--amber);
+      border-color: rgba(255,179,64,0.4);
+      box-shadow: 0 0 8px rgba(255,179,64,0.4);
+    }
+    .fm-dot.connected:hover {
+      background: #fff;
+      border-color: var(--amber);
+      box-shadow: 0 0 14px rgba(255,179,64,0.7);
+    }
+
+    /* ── Price bubble ── */
+    .fm-price {
+      background: var(--ink2);
+      border: 1px solid rgba(255,179,64,0.4);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: var(--font-h);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber);
       white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      letter-spacing: 0.3px;
     }
 
-    /* ── loading overlay ── */
-    .fm-loading {
-      position: absolute; inset: 0;
-      background: rgba(10,15,30,0.75);
-      display: flex; align-items: center; justify-content: center;
+    /* ── Side Panel ── */
+    .panel {
+      position: absolute;
+      top: 72px;
+      left: 16px;
+      width: 280px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      z-index: 800;
+      backdrop-filter: blur(24px);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 90px);
+      overflow: hidden;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .panel-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-port {
+      font-family: var(--font-h);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.4px;
+      margin-bottom: 3px;
+    }
+
+    .panel-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-meta .sep { opacity: 0.3; }
+
+    .panel-hint {
+      padding: 14px 18px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .panel-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 0;
+    }
+
+    .panel-list::-webkit-scrollbar { width: 4px; }
+    .panel-list::-webkit-scrollbar-track { background: transparent; }
+    .panel-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .conn-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+      gap: 10px;
+    }
+    .conn-item:hover { background: var(--glass); }
+
+    .conn-rank {
+      font-family: var(--font-h);
+      font-size: 10px;
+      color: var(--muted);
+      min-width: 18px;
+    }
+
+    .conn-name {
+      font-size: 13px;
+      color: var(--subtle);
+      flex: 1;
+      transition: color 0.15s;
+    }
+    .conn-item:hover .conn-name { color: var(--text); }
+
+    .conn-price {
+      font-family: var(--font-h);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--amber);
+      background: rgba(255,179,64,0.08);
+      border: 1px solid rgba(255,179,64,0.2);
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .conn-no-price {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 3px 8px;
+    }
+
+    /* ── Cache bar ── */
+    .cache-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 11px;
+      color: var(--muted);
+      z-index: 800;
+      backdrop-filter: blur(12px);
+      white-space: nowrap;
+      pointer-events: none;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      position: absolute;
+      inset: 0;
+      background: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       z-index: 2000;
-      color: var(--teal); font-size: 14px; gap: 10px;
+      gap: 20px;
+      transition: opacity 0.5s;
     }
-    .fm-loading.hidden { display: none; }
+    .loading.out { opacity: 0; pointer-events: none; }
 
-    .fm-spinner {
-      width: 18px; height: 18px; border-radius: 50%;
-      border: 2px solid rgba(29,158,117,0.25);
-      border-top-color: var(--teal);
-      animation: fm-spin 0.7s linear infinite;
+    .loading-icon {
+      font-size: 42px;
+      animation: bob 2s ease-in-out infinite;
     }
-    @keyframes fm-spin { to { transform: rotate(360deg); } }
+    @keyframes bob {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
 
-    .fm-error {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 8px; z-index: 2000;
-      color: var(--muted); font-size: 13px; display: none;
+    .loading-text {
+      font-family: var(--font-h);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--subtle);
+      letter-spacing: 0.5px;
+    }
+
+    .loading-bar {
+      width: 160px;
+      height: 2px;
+      background: var(--border2);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--teal), var(--blue));
+      border-radius: 1px;
+      animation: load 1.5s ease-in-out infinite;
+    }
+    @keyframes load {
+      0%   { width: 0%; margin-left: 0%; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* ── Gradient overlay at bottom ── */
+    .bottom-gradient {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: linear-gradient(to top, rgba(11,15,26,0.6) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 700;
     }
   </style>
 </head>
 <body>
 
-<!--
-  ╔══════════════════════════════════════════════════════════╗
-  ║  DROP THIS ENTIRE <div class="fm-root"> BLOCK INTO ANY  ║
-  ║  PAGE ON YOUR WEBSITE.  Nothing else is needed.         ║
-  ╚══════════════════════════════════════════════════════════╝
--->
-<div class="fm-root">
+<div class="app">
 
-  <div id="fm-map"></div>
+  <!-- Map -->
+  <div id="map"></div>
 
-  <!-- Loading -->
-  <div class="fm-loading" id="fm-loading">
-    <div class="fm-spinner"></div>
-    Loading ferry data…
-  </div>
+  <!-- Gradient overlays -->
+  <div class="bottom-gradient"></div>
 
-  <!-- Error -->
-  <div class="fm-error" id="fm-error">
-    <span style="font-size:28px">⚓</span>
-    <span id="fm-err-msg">Could not load ferry data.</span>
-  </div>
-
-  <!-- Toolbar -->
-  <div class="fm-toolbar">
-    <div class="fm-search-wrap">
-      <input class="fm-search" id="fm-search" type="text"
-             placeholder="Search port…" autocomplete="off" />
-      <div class="fm-suggestions" id="fm-suggestions"></div>
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">⚓</div>
+      <div>
+        <div class="brand-name">Ferry Routes</div>
+        <div class="brand-sub">Mediterranean Explorer</div>
+      </div>
     </div>
-    <div class="fm-badge" id="fm-badge">Loading…</div>
+
+    <div class="stat-pill">
+      <div class="dot"></div>
+      <span id="stat-text">Loading…</span>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search" id="search" type="text" placeholder="Search port…" autocomplete="off" />
+      <div class="suggestions" id="suggestions"></div>
+    </div>
   </div>
 
   <!-- Side panel -->
-  <div class="fm-panel" id="fm-panel">
-    <div class="fm-panel-title" id="fm-panel-title">Ferry routes</div>
-    <div class="fm-panel-hint"  id="fm-panel-hint">
-      Click a port on the map to see its connections and indicative prices.
+  <div class="panel" id="panel">
+    <div class="panel-head">
+      <div class="panel-port" id="panel-port">Ferry Routes</div>
+      <div class="panel-meta" id="panel-meta">
+        <span>Select a port to explore</span>
+      </div>
     </div>
-    <ul class="fm-conn-list" id="fm-conn-list"></ul>
+    <div class="panel-hint" id="panel-hint">
+      Click any glowing dot on the map to see connections and indicative prices.
+    </div>
+    <div class="panel-list" id="panel-list" style="display:none"></div>
   </div>
 
-  <!-- Footer -->
-  <div class="fm-footer" id="fm-footer">Prices indicative · updated nightly</div>
+  <!-- Cache bar -->
+  <div class="cache-bar" id="cache-bar">Prices indicative · updated daily</div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="loading-icon">⛵</div>
+    <div class="loading-text">Charting the seas…</div>
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  </div>
 
 </div>
-<!-- end .fm-root -->
-
 
 <script>
 (function () {
-  // ═══════════════════════════════════════════════════════════
-  //  ⚙️  CONFIGURATION — edit these two lines
-  // ═══════════════════════════════════════════════════════════
-
-  // URL to your routes.json on GitHub (raw content URL)
-  // Format: https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/data/routes.json
-  const DATA_URL = 'https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/data/routes.json';
-
-  // Map starting position and zoom (lat, lon, zoom)
-  const MAP_CENTER = [37.5, 24.0];   // Greece / Aegean Sea
+  // ════════════════════════════════════════════════
+  //  CONFIG — update DATA_URL after GitHub push
+  // ════════════════════════════════════════════════
+  const DATA_URL   = 'https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/data/routes.json';
+  const MAP_CENTER = [37.8, 23.5];
   const MAP_ZOOM   = 6;
 
-  // ═══════════════════════════════════════════════════════════
-
-  const $ = id => document.getElementById(id);
-
-  // ── Map init ────────────────────────────────────────────────
-  const map = L.map('fm-map', {
+  // ── Map init ──────────────────────────────────
+  const map = L.map('map', {
     center     : MAP_CENTER,
     zoom       : MAP_ZOOM,
     zoomControl: false
   });
 
-  L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 14 }
-  ).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© CARTO',
+    subdomains : 'abcd',
+    maxZoom    : 14
+  }).addTo(map);
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  // ── State ───────────────────────────────────────────────────
-  let allPorts    = [];
-  let connData    = {};       // { portName: [{destination, minPrice, ...}] }
-  let markers     = {};       // portName → L.Marker
-  let lines       = [];
-  let pricePins   = [];
+  // ── State ─────────────────────────────────────
+  let allPorts   = [];
+  let connData   = {};
+  let markers    = {};
+  let lines      = [];
+  let pricePins  = [];
+  let selectedPort = null;
 
-  // ── Helpers ─────────────────────────────────────────────────
-  function makeDot(cls = '') {
+  // ── Helpers ───────────────────────────────────
+  function makeDotIcon(cls = '') {
     const el = document.createElement('div');
     el.className = 'fm-dot' + (cls ? ' ' + cls : '');
     return el;
-  }
-
-  function icon(html, anchor = [0, 0]) {
-    return L.divIcon({ html, className: '', iconSize: [0, 0], iconAnchor: anchor });
-  }
-
-  function fmtPrice(val, cur = 'EUR') {
-    const syms = { EUR: '€', USD: '$', GBP: '£' };
-    const n = parseFloat(val);
-    return isNaN(n) ? String(val) : (syms[cur] ?? cur) + Math.round(n);
   }
 
   function clearSelection() {
@@ -335,146 +563,185 @@
       d.classList.remove('active', 'connected'));
   }
 
-  // ── Select a port ────────────────────────────────────────────
+  function fmtPrice(val) {
+    const n = parseFloat(val);
+    return isNaN(n) ? val : `€${n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)}`;
+  }
+
+  // ── Select a port ─────────────────────────────
   function selectPort(port) {
     clearSelection();
+    selectedPort = port;
 
-    const dotEl = markers[port.name]?._icon?.querySelector('.fm-dot');
+    const dotEl = markers[port.code]?._icon?.querySelector('.fm-dot');
     if (dotEl) dotEl.classList.add('active');
 
-    const conns = connData[port.name] ?? [];
+    const conns = connData[port.code] ?? [];
 
-    $('fm-panel-title').textContent = port.name;
-    $('fm-panel-hint').textContent  =
-      conns.length ? `${conns.length} direct connection${conns.length > 1 ? 's' : ''}` : 'No connections found.';
+    // Update panel header
+    document.getElementById('panel-port').textContent = port.name;
+    document.getElementById('panel-meta').innerHTML =
+      `<span>${port.code}</span><span class="sep">·</span><span>${conns.length} connection${conns.length !== 1 ? 's' : ''}</span>`;
 
-    const list = $('fm-conn-list');
+    const hint = document.getElementById('panel-hint');
+    const list = document.getElementById('panel-list');
+
+    if (!conns.length) {
+      hint.textContent = 'No connections found for this port.';
+      hint.style.display = 'flex';
+      list.style.display = 'none';
+      return;
+    }
+
+    hint.style.display = 'none';
+    list.style.display = 'block';
     list.innerHTML = '';
 
-    conns.forEach(conn => {
-      const destName = conn.destination ?? conn.destinationName ?? '';
-      const dest     = allPorts.find(p => p.name === destName);
-      const price    = conn.minPrice ?? conn.price ?? conn.indicativePrice ?? null;
-      const cur      = conn.currency ?? 'EUR';
+    conns.forEach((conn, i) => {
+      const dest = allPorts.find(p => p.code === conn.destination);
 
       // Draw route line
       if (dest?.lat && dest?.lon) {
-        lines.push(
-          L.polyline([[port.lat, port.lon], [dest.lat, dest.lon]], {
-            color: '#1d9e75', weight: 1.5, opacity: 0.45, dashArray: '5 5'
-          }).addTo(map)
-        );
+        const line = L.polyline(
+          [[port.lat, port.lon], [dest.lat, dest.lon]],
+          {
+            color  : conn.minPrice ? '#ffb340' : '#4f9eff',
+            weight : 1.5,
+            opacity: 0.35,
+            dashArray: '4 6'
+          }
+        ).addTo(map);
+        lines.push(line);
 
         // Price bubble
-        if (price != null) {
-          pricePins.push(
-            L.marker([dest.lat, dest.lon], {
-              icon: icon(`<div class="fm-price-bubble">from ${fmtPrice(price, cur)}</div>`, [0, -10]),
-              zIndexOffset: 500
-            }).addTo(map)
-          );
+        if (conn.minPrice) {
+          const pin = L.marker([dest.lat, dest.lon], {
+            icon: L.divIcon({
+              html       : `<div class="fm-price">from ${fmtPrice(conn.minPrice)}</div>`,
+              className  : '',
+              iconSize   : [0, 0],
+              iconAnchor : [-4, 20]
+            }),
+            zIndexOffset: 600
+          }).addTo(map);
+          pricePins.push(pin);
         }
 
         // Highlight connected dot
-        const dEl = markers[dest.name]?._icon?.querySelector('.fm-dot');
+        const dEl = markers[dest.code]?._icon?.querySelector('.fm-dot');
         if (dEl) dEl.classList.add('connected');
       }
 
       // Panel row
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span class="fm-conn-name">${destName}</span>
-        ${price != null
-          ? `<span class="fm-conn-price">from ${fmtPrice(price, cur)}</span>`
-          : `<span class="fm-conn-noprice">see prices</span>`}
+      const item = document.createElement('div');
+      item.className = 'conn-item';
+      item.innerHTML = `
+        <span class="conn-rank">${i + 1}</span>
+        <span class="conn-name">${conn.destinationName || conn.destination}</span>
+        ${conn.minPrice
+          ? `<span class="conn-price">from ${fmtPrice(conn.minPrice)}</span>`
+          : `<span class="conn-no-price">–</span>`}
       `;
-      li.onclick = () => {
-        if (dest) map.flyTo([dest.lat, dest.lon], 9, { duration: 0.9 });
+      item.onclick = () => {
+        if (dest) map.flyTo([dest.lat, dest.lon], 9, { duration: 1 });
       };
-      list.appendChild(li);
+      list.appendChild(item);
     });
   }
 
-  // ── Render port dots ─────────────────────────────────────────
+  // ── Render ports ──────────────────────────────
   function renderPorts() {
     allPorts.forEach(port => {
       if (!port.lat || !port.lon) return;
 
-      const el = makeDot();
+      const el = makeDotIcon();
       el.title = port.name;
 
       const m = L.marker([port.lat, port.lon], {
-        icon: L.divIcon({ html: el, className: '', iconSize: [9, 9], iconAnchor: [4.5, 4.5] })
+        icon: L.divIcon({
+          html     : el,
+          className: '',
+          iconSize : [8, 8],
+          iconAnchor: [4, 4]
+        })
       }).addTo(map);
 
       m.on('click', () => selectPort(port));
-      markers[port.name] = m;
+      markers[port.code] = m;
     });
   }
 
-  // ── Load data ─────────────────────────────────────────────────
+  // ── Load data ─────────────────────────────────
   async function load() {
     try {
-      const res = await fetch(DATA_URL);
+      const res  = await fetch(DATA_URL);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
 
-      const data  = await res.json();
-      allPorts    = data.ports ?? [];
-      connData    = data.connections ?? {};
+      allPorts = data.ports ?? [];
+      connData = data.connections ?? {};
 
       const d = new Date(data.fetchedAt);
-      $('fm-badge').textContent  = `${allPorts.length} ports`;
-      $('fm-footer').textContent =
-        `Prices indicative · updated ${d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
+      document.getElementById('stat-text').textContent =
+        `${allPorts.length} ports loaded`;
+      document.getElementById('cache-bar').textContent =
+        `Prices indicative · last updated ${d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
 
       renderPorts();
-      $('fm-loading').classList.add('hidden');
+
+      // Fade out loading screen
+      const loading = document.getElementById('loading');
+      loading.classList.add('out');
+      setTimeout(() => loading.remove(), 600);
 
     } catch (err) {
-      $('fm-loading').classList.add('hidden');
-      $('fm-err-msg').textContent = `Could not load ferry data: ${err.message}`;
-      $('fm-error').style.display = 'flex';
+      document.querySelector('.loading-text').textContent = 'Could not load ferry data';
+      document.querySelector('.loading-bar').style.display = 'none';
       console.error('[FerryMap]', err);
     }
   }
 
-  // ── Search ────────────────────────────────────────────────────
-  const searchEl  = $('fm-search');
-  const suggestEl = $('fm-suggestions');
+  // ── Search ────────────────────────────────────
+  const searchEl  = document.getElementById('search');
+  const suggestEl = document.getElementById('suggestions');
 
   searchEl.addEventListener('input', () => {
     const q = searchEl.value.trim().toLowerCase();
     if (q.length < 2) { suggestEl.style.display = 'none'; return; }
 
-    const hits = allPorts.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8);
+    const hits = allPorts
+      .filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q))
+      .slice(0, 7);
+
     if (!hits.length) { suggestEl.style.display = 'none'; return; }
 
-    suggestEl.innerHTML = hits.map(p =>
-      `<div class="fm-suggestion" data-n="${p.name}">${p.name}</div>`
-    ).join('');
+    suggestEl.innerHTML = hits.map(p => `
+      <div class="suggestion" data-code="${p.code}">
+        <span class="suggestion-code">${p.code}</span>
+        <span class="suggestion-name">${p.name}</span>
+      </div>
+    `).join('');
     suggestEl.style.display = 'block';
   });
 
   suggestEl.addEventListener('click', e => {
-    const name = e.target.dataset.n;
-    if (!name) return;
-    const port = allPorts.find(p => p.name === name);
+    const code = e.target.closest('.suggestion')?.dataset.code;
+    if (!code) return;
+    const port = allPorts.find(p => p.code === code);
     if (!port) return;
-    searchEl.value = name;
+    searchEl.value = port.name;
     suggestEl.style.display = 'none';
-    map.flyTo([port.lat, port.lon], 9, { duration: 1 });
+    map.flyTo([port.lat, port.lon], 9, { duration: 1.2 });
     selectPort(port);
   });
 
   document.addEventListener('click', e => {
-    if (!e.target.closest('#fm-search') && !e.target.closest('#fm-suggestions'))
-      suggestEl.style.display = 'none';
+    if (!e.target.closest('.search-wrap')) suggestEl.style.display = 'none';
   });
 
-  // ── Boot ──────────────────────────────────────────────────────
+  // ── Boot ──────────────────────────────────────
   load();
 })();
 </script>
-
 </body>
 </html>
