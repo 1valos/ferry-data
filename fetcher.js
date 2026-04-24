@@ -14,6 +14,25 @@ const CRS_BASE = 'https://crs.ferryhopper.com/api/connections/active-prices';
 const OUT_FILE = path.join(__dirname, 'data', 'routes.json');
 const DELAY_MS = 300;
 
+// ─── Operator names ───────────────────────────────────────────────────
+const OPERATORS = {
+  'ATC'  : 'Blue Star Ferries',
+  'SJT'  : 'SeaJets',
+  'FFE'  : 'Fast Ferries',
+  'GST'  : 'Golden Star Ferries',
+  'MSF'  : 'Hellenic Seaways',
+  'MNA'  : 'Minoan Lines',
+  'SRN'  : 'Saronic Ferries',
+  'ANES' : 'ANES Ferries',
+  'SLF'  : 'Saronikos Ferries',
+  'SLFI' : 'Saronikos Ferries',
+  'ALF'  : 'Alpha Ferries',
+  'AF1'  : 'Aegean Flying Dolphins',
+  'AFD'  : 'Aegean Flying Dolphins',
+  'RMZ'  : 'Rolly Marine',
+  'SKO'  : 'Skopelitis Lines',
+};
+
 // ─── Port list: code, name, lat, lon ─────────────────────────
 // Greek + major Mediterranean ports with coordinates
 const PORTS = [
