@@ -162,9 +162,11 @@ async function main() {
   const portByCode = {};
   PORTS.forEach(p => { portByCode[p.code] = p; });
 
-  // connections: { portCode: { destCode: minPriceCents } }
+  // priceMap: { portCode: { destCode: minPriceCents } }
   const priceMap = {};
-  PORTS.forEach(p => { priceMap[p.code] = {}; });
+  // operatorMap: { portCode: { destCode: [{code, name, price}] } }
+  const operatorMap = {};
+  PORTS.forEach(p => { priceMap[p.code] = {}; operatorMap[p.code] = {}; });
 
   let reqDone = 0, totalReqs = PORTS.length * months.length;
 
@@ -174,12 +176,20 @@ async function main() {
       try {
         const rows = await fetchPrices(port.code, year, month);
         for (const row of rows) {
-          const dest  = row.destination;
-          const price = parseInt(row.general_min_adult_price, 10);
+          const dest     = row.destination;
+          const price    = parseInt(row.general_min_adult_price, 10);
+          const opCode   = row.operator_code || '';
           if (!dest || isNaN(price)) continue;
 
+          // Track min price
           if (!priceMap[port.code][dest] || price < priceMap[port.code][dest]) {
             priceMap[port.code][dest] = price;
+          }
+
+          // Track operators - deduplicate by code, keep lowest price per operator
+          if (!operatorMap[port.code][dest]) operatorMap[port.code][dest] = {};
+          if (!operatorMap[port.code][dest][opCode] || price < operatorMap[port.code][dest][opCode]) {
+            operatorMap[port.code][dest][opCode] = price;
           }
         }
       } catch (e) {
@@ -199,16 +209,27 @@ async function main() {
   }
 
   // Build final connections structure
-  // connections: { portCode: [ {destination, destinationName, minPrice, currency} ] }
   const connections = {};
   for (const port of PORTS) {
     connections[port.code] = Object.entries(priceMap[port.code])
-      .map(([destCode, cents]) => ({
-        destination    : destCode,
-        destinationName: portByCode[destCode]?.name ?? destCode,
-        minPrice       : (cents / 100).toFixed(2),
-        currency       : 'EUR'
-      }))
+      .map(([destCode, cents]) => {
+        // Build sorted operator list for this route
+        const ops = Object.entries(operatorMap[port.code][destCode] || {})
+          .map(([code, opCents]) => ({
+            code,
+            name : OPERATORS[code] || code,
+            price: (opCents / 100).toFixed(2)
+          }))
+          .sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+        return {
+          destination    : destCode,
+          destinationName: portByCode[destCode]?.name ?? destCode,
+          minPrice       : (cents / 100).toFixed(2),
+          currency       : 'EUR',
+          operators      : ops
+        };
+      })
       .sort((a, b) => parseFloat(a.minPrice) - parseFloat(b.minPrice));
   }
 
