@@ -1,747 +1,400 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ferry Routes</title>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>FerryRoutes — Mediterranean Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <style>
-    :root {
-      --ink     : #0b0f1a;
-      --ink2    : #111827;
-      --surface : rgba(11,15,26,0.92);
-      --glass   : rgba(255,255,255,0.04);
-      --border  : rgba(255,255,255,0.07);
-      --border2 : rgba(255,255,255,0.12);
-      --text    : #f0f2f8;
-      --muted   : #6b7494;
-      --subtle  : #9da5c0;
-      --teal    : #00d4a0;
-      --teal2   : #00b389;
-      --amber   : #ffb340;
-      --amber2  : #e69c20;
-      --blue    : #4f9eff;
-      --red     : #ff5f5f;
-      --font-h  : 'Syne', sans-serif;
-      --font-b  : 'DM Sans', sans-serif;
-      --radius  : 14px;
-      --radius-s: 8px;
-      --shadow  : 0 8px 32px rgba(0,0,0,0.5);
-      --shadow-s: 0 4px 16px rgba(0,0,0,0.3);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      background: var(--ink);
-      color: var(--text);
-      font-family: var(--font-b);
-      overflow: hidden;
-    }
-
-    /* ── Layout ── */
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      position: relative;
-    }
-
-    /* ── Topbar ── */
-    .topbar {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      padding: 0 20px;
-      gap: 12px;
-      z-index: 900;
-      background: linear-gradient(to bottom, rgba(11,15,26,0.98) 70%, transparent);
-      pointer-events: none;
-    }
-
-    .topbar > * { pointer-events: all; }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-
-    .brand-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--teal), var(--blue));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px rgba(0,212,160,0.3);
-    }
-
-    .brand-name {
-      font-family: var(--font-h);
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text);
-    }
-
-    .brand-sub {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 300;
-      letter-spacing: 0.5px;
-    }
-
-    /* Search */
-    .search-wrap {
-      position: relative;
-      margin-left: auto;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 12px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 14px;
-      pointer-events: none;
-    }
-
-    .search {
-      width: 220px;
-      padding: 8px 12px 8px 36px;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius-s);
-      color: var(--text);
-      font-size: 13px;
-      font-family: var(--font-b);
-      outline: none;
-      backdrop-filter: blur(20px);
-      transition: border-color 0.2s, width 0.3s;
-    }
-    .search::placeholder { color: var(--muted); }
-    .search:focus {
-      border-color: var(--teal);
-      width: 260px;
-      box-shadow: 0 0 0 3px rgba(0,212,160,0.1);
-    }
-
-    .suggestions {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      width: 260px;
-      background: var(--ink2);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      overflow: hidden;
-      display: none;
-      z-index: 1000;
-      box-shadow: var(--shadow);
-    }
-
-    .suggestion {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      transition: background 0.15s;
-      font-size: 13px;
-    }
-    .suggestion:hover { background: var(--glass); }
-    .suggestion-code {
-      font-family: var(--font-h);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--teal);
-      background: rgba(0,212,160,0.1);
-      border-radius: 4px;
-      padding: 2px 6px;
-      min-width: 40px;
-      text-align: center;
-    }
-    .suggestion-name { color: var(--subtle); }
-
-    /* Stats pill */
-    .stat-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 12px;
-      color: var(--muted);
-      backdrop-filter: blur(20px);
-    }
-    .stat-pill .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--teal);
-      box-shadow: 0 0 6px var(--teal);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%,100% { opacity:1; transform:scale(1); }
-      50%      { opacity:0.5; transform:scale(0.8); }
-    }
-
-    /* ── Map ── */
-    #map {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-    }
-    .leaflet-container { background: #060a14 !important; }
-    .leaflet-control-zoom a {
-      background: var(--ink2) !important;
-      color: var(--subtle) !important;
-      border-color: var(--border2) !important;
-      font-family: var(--font-h) !important;
-    }
-    .leaflet-control-zoom a:hover { color: var(--text) !important; }
-
-    /* ── Port dots ── */
-    .fm-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--teal);
-      border: 1.5px solid rgba(0,212,160,0.3);
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      position: relative;
-    }
-    .fm-dot::after {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      background: rgba(0,212,160,0.08);
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-    .fm-dot:hover::after, .fm-dot.active::after { opacity: 1; }
-    .fm-dot:hover, .fm-dot.active {
-      transform: scale(1.8);
-      box-shadow: 0 0 12px rgba(0,212,160,0.6);
-      background: #fff;
-      border-color: var(--teal);
-    }
-    .fm-dot.connected {
-      background: var(--amber);
-      border-color: rgba(255,179,64,0.4);
-      box-shadow: 0 0 8px rgba(255,179,64,0.4);
-    }
-    .fm-dot.connected:hover {
-      background: #fff;
-      border-color: var(--amber);
-      box-shadow: 0 0 14px rgba(255,179,64,0.7);
-    }
-
-    /* ── Price bubble ── */
-    .fm-price {
-      background: var(--ink2);
-      border: 1px solid rgba(255,179,64,0.4);
-      border-radius: 6px;
-      padding: 3px 8px;
-      font-family: var(--font-h);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--amber);
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-      letter-spacing: 0.3px;
-    }
-
-    /* ── Side Panel ── */
-    .panel {
-      position: absolute;
-      top: 72px;
-      left: 16px;
-      width: 280px;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      z-index: 800;
-      backdrop-filter: blur(24px);
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      max-height: calc(100vh - 90px);
-      overflow: hidden;
-      transition: opacity 0.3s, transform 0.3s;
-    }
-
-    .panel-head {
-      padding: 16px 18px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .panel-port {
-      font-family: var(--font-h);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.4px;
-      margin-bottom: 3px;
-    }
-
-    .panel-meta {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .panel-meta .sep { opacity: 0.3; }
-
-    .panel-hint {
-      padding: 14px 18px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.5;
-      text-align: center;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .panel-list {
-      overflow-y: auto;
-      flex: 1;
-      padding: 8px 0;
-    }
-
-    .panel-list::-webkit-scrollbar { width: 4px; }
-    .panel-list::-webkit-scrollbar-track { background: transparent; }
-    .panel-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-    .conn-item {
-      display: flex;
-      align-items: center;
-      padding: 9px 18px;
-      cursor: pointer;
-      transition: background 0.15s;
-      gap: 10px;
-    }
-    .conn-item:hover { background: var(--glass); }
-
-    .conn-rank {
-      font-family: var(--font-h);
-      font-size: 10px;
-      color: var(--muted);
-      min-width: 18px;
-    }
-
-    .conn-name {
-      font-size: 13px;
-      color: var(--subtle);
-      flex: 1;
-      transition: color 0.15s;
-    }
-    .conn-item:hover .conn-name { color: var(--text); }
-
-    .conn-price {
-      font-family: var(--font-h);
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--amber);
-      background: rgba(255,179,64,0.08);
-      border: 1px solid rgba(255,179,64,0.2);
-      padding: 3px 8px;
-      border-radius: 6px;
-      letter-spacing: 0.2px;
-    }
-
-    .conn-no-price {
-      font-size: 11px;
-      color: var(--muted);
-      padding: 3px 8px;
-    }
-
-    /* ── Cache bar ── */
-    .cache-bar {
-      position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 11px;
-      color: var(--muted);
-      z-index: 800;
-      backdrop-filter: blur(12px);
-      white-space: nowrap;
-      pointer-events: none;
-      letter-spacing: 0.3px;
-    }
-
-    /* ── Loading ── */
-    .loading {
-      position: absolute;
-      inset: 0;
-      background: var(--ink);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      gap: 20px;
-      transition: opacity 0.5s;
-    }
-    .loading.out { opacity: 0; pointer-events: none; }
-
-    .loading-icon {
-      font-size: 42px;
-      animation: bob 2s ease-in-out infinite;
-    }
-    @keyframes bob {
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-8px); }
-    }
-
-    .loading-text {
-      font-family: var(--font-h);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--subtle);
-      letter-spacing: 0.5px;
-    }
-
-    .loading-bar {
-      width: 160px;
-      height: 2px;
-      background: var(--border2);
-      border-radius: 1px;
-      overflow: hidden;
-    }
-    .loading-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--teal), var(--blue));
-      border-radius: 1px;
-      animation: load 1.5s ease-in-out infinite;
-    }
-    @keyframes load {
-      0%   { width: 0%; margin-left: 0%; }
-      50%  { width: 60%; margin-left: 20%; }
-      100% { width: 0%; margin-left: 100%; }
-    }
-
-    /* ── Gradient overlay at bottom ── */
-    .bottom-gradient {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 80px;
-      background: linear-gradient(to top, rgba(11,15,26,0.6) 0%, transparent 100%);
-      pointer-events: none;
-      z-index: 700;
-    }
+    :root{
+      --ocean:#060e1e;--panel:rgba(6,14,30,.93);--glass:rgba(255,255,255,.04);
+      --border:rgba(255,255,255,.08);--b2:rgba(255,255,255,.14);
+      --text:#eef2ff;--muted:#4d6080;--sub:#8fa3c8;
+      --cyan:#00e5ff;--cyan2:#00b8d4;--gold:#ffd166;
+      --fh:'Fraunces',serif;--fb:'Outfit',sans-serif;
+      --r:16px;--rs:10px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;overflow:hidden;background:var(--ocean);font-family:var(--fb)}
+    #map{position:fixed;inset:0;z-index:1}
+    .leaflet-tile-pane{filter:saturate(1.5) brightness(1.12)}
+    .leaflet-container{background:#06101e!important}
+    .leaflet-control-zoom{border:none!important;box-shadow:none!important}
+    .leaflet-control-zoom a{
+      width:34px!important;height:34px!important;line-height:34px!important;
+      background:var(--panel)!important;border:1px solid var(--b2)!important;
+      color:var(--sub)!important;font-family:var(--fh)!important;font-size:18px!important;
+      backdrop-filter:blur(16px)!important;border-radius:var(--rs)!important;
+      margin-bottom:4px!important;transition:color .2s!important;display:block!important}
+    .leaflet-control-zoom a:hover{color:var(--cyan)!important}
+    .route-flow{animation:dashFlow 2s linear infinite}
+    @keyframes dashFlow{from{stroke-dashoffset:0}to{stroke-dashoffset:-32}}
+    .pdot{position:relative;cursor:pointer;width:10px;height:10px}
+    .pdot-ring{position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(0,229,255,.2);animation:portRing 3s ease-out infinite}
+    @keyframes portRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.4);opacity:0}}
+    .pdot-core{width:10px;height:10px;border-radius:50%;position:relative;z-index:1;
+      background:var(--cyan);border:2px solid rgba(0,229,255,.2);
+      box-shadow:0 0 10px rgba(0,229,255,.5),0 0 22px rgba(0,229,255,.15);
+      transition:transform .2s,box-shadow .2s,background .2s}
+    .pdot:hover .pdot-core,.pdot.active .pdot-core{
+      transform:scale(1.7);background:#fff;
+      box-shadow:0 0 20px rgba(0,229,255,.9),0 0 40px rgba(0,229,255,.35);border-color:var(--cyan)}
+    .pdot.conn .pdot-core{background:var(--gold);border-color:rgba(255,209,102,.3);
+      box-shadow:0 0 10px rgba(255,209,102,.6),0 0 22px rgba(255,209,102,.2)}
+    .pdot.conn .pdot-ring{border-color:rgba(255,209,102,.25)}
+    .pdot.conn:hover .pdot-core{background:#fff;border-color:var(--gold);
+      box-shadow:0 0 20px rgba(255,209,102,.9),0 0 40px rgba(255,209,102,.35)}
+    .ptag{background:rgba(6,14,28,.97);border:1px solid rgba(255,209,102,.3);
+      border-radius:11px;padding:5px 12px 7px;pointer-events:none;
+      backdrop-filter:blur(12px);box-shadow:0 6px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
+      white-space:nowrap;text-align:center}
+    .ptag-lbl{font-family:var(--fb);font-size:8px;font-weight:600;letter-spacing:1.5px;
+      text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+    .ptag-amt{font-family:var(--fh);font-size:18px;font-weight:900;color:var(--gold);
+      letter-spacing:-1px;line-height:1;font-style:italic}
+    .ptag-amt sup{font-size:10px;font-weight:400;vertical-align:super;margin-right:1px;font-style:normal}
+    .topbar{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:900;
+      display:flex;align-items:center;gap:0;background:var(--panel);border:1px solid var(--b2);
+      border-radius:50px;padding:5px 5px 5px 22px;backdrop-filter:blur(24px);
+      box-shadow:0 8px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);min-width:580px}
+    .tb-brand{font-family:var(--fh);font-size:14px;font-weight:900;font-style:italic;
+      color:var(--cyan);letter-spacing:-.3px;margin-right:18px;white-space:nowrap;
+      text-shadow:0 0 20px rgba(0,229,255,.4)}
+    .tb-div{width:1px;height:22px;background:var(--b2);margin:0 2px;flex-shrink:0}
+    .tb-field{position:relative;flex:1}
+    .tb-lbl{position:absolute;top:2px;left:13px;font-family:var(--fb);font-size:9px;font-weight:600;
+      letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);pointer-events:none}
+    .tb-inp{width:100%;background:transparent;border:none;outline:none;font-family:var(--fb);
+      font-size:13px;font-weight:500;color:var(--text);padding:18px 13px 5px;cursor:pointer;min-width:150px}
+    .tb-inp::placeholder{color:var(--muted);font-weight:300}
+    .tb-arrow{font-size:16px;color:var(--muted);padding:0 6px;flex-shrink:0}
+    .tb-btn{background:linear-gradient(135deg,var(--cyan),var(--cyan2));border:none;border-radius:40px;
+      padding:11px 24px;font-family:var(--fh);font-size:13px;font-weight:900;font-style:italic;
+      color:var(--ocean);cursor:pointer;white-space:nowrap;letter-spacing:-.2px;
+      transition:opacity .2s,transform .2s,box-shadow .2s;box-shadow:0 0 24px rgba(0,229,255,.35)}
+    .tb-btn:hover{opacity:.9;transform:scale(1.04);box-shadow:0 0 36px rgba(0,229,255,.55)}
+    .tb-drop{position:absolute;top:calc(100% + 8px);left:0;min-width:280px;
+      background:rgba(6,14,30,.98);border:1px solid var(--b2);border-radius:var(--r);
+      overflow:hidden;display:none;z-index:1000;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+    .ditem{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;
+      transition:background .15s;border-bottom:1px solid var(--border)}
+    .ditem:last-child{border-bottom:none}
+    .ditem:hover{background:var(--glass)}
+    .dcode{font-family:var(--fh);font-size:11px;font-weight:900;font-style:italic;
+      color:var(--cyan);min-width:38px;letter-spacing:.5px}
+    .dname{font-family:var(--fb);font-size:13px;color:var(--sub)}
+    .dcountry{font-size:11px;color:var(--muted);margin-left:auto}
+    .panel{position:fixed;top:86px;left:18px;width:296px;max-height:calc(100vh - 108px);
+      background:var(--panel);border:1px solid var(--b2);border-radius:var(--r);z-index:800;
+      backdrop-filter:blur(24px);box-shadow:0 16px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
+      display:flex;flex-direction:column;overflow:hidden;
+      opacity:0;transform:translateX(-12px);transition:opacity .35s,transform .35s;pointer-events:none}
+    .panel.vis{opacity:1;transform:translateX(0);pointer-events:all}
+    .p-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .p-name{font-family:var(--fh);font-size:22px;font-weight:900;font-style:italic;
+      color:var(--text);letter-spacing:-.8px;line-height:1.1;margin-bottom:6px}
+    .p-tags{display:flex;gap:6px;align-items:center}
+    .pt-code{font-family:var(--fb);font-size:10px;font-weight:600;letter-spacing:1.2px;
+      text-transform:uppercase;padding:3px 9px;border-radius:20px;
+      background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.2)}
+    .pt-count{font-family:var(--fb);font-size:10px;font-weight:500;padding:3px 9px;
+      border-radius:20px;background:var(--glass);color:var(--muted);border:1px solid var(--border)}
+    .p-empty{padding:32px 20px;text-align:center}
+    .p-empty-ico{font-size:30px;margin-bottom:10px}
+    .p-empty-txt{font-family:var(--fb);font-size:13px;color:var(--muted);line-height:1.5}
+    .p-list{overflow-y:auto;flex:1;padding:6px 0 8px}
+    .p-list::-webkit-scrollbar{width:3px}
+    .p-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+    .crow{display:flex;align-items:center;padding:9px 20px;cursor:pointer;
+      transition:background .15s;gap:10px;position:relative}
+    .crow::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%) scaleY(0);
+      width:3px;height:55%;background:var(--gold);border-radius:2px;transition:transform .2s}
+    .crow:hover::before{transform:translateY(-50%) scaleY(1)}
+    .crow:hover{background:rgba(255,255,255,.025)}
+    .cnum{font-family:var(--fh);font-size:10px;font-style:italic;color:var(--muted);min-width:20px}
+    .cdest{font-family:var(--fb);font-size:13px;color:var(--sub);flex:1;transition:color .15s}
+    .crow:hover .cdest{color:var(--text)}
+    .cprice{font-family:var(--fh);font-size:14px;font-weight:900;font-style:italic;
+      color:var(--gold);letter-spacing:-.3px}
+    .cprice-from{font-size:9px;font-style:normal;font-family:var(--fb);
+      color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:2px}
+    .cnoprice{font-size:11px;color:var(--muted)}
+    .rcard{position:fixed;top:86px;right:18px;width:296px;background:var(--panel);
+      border:1px solid var(--b2);border-radius:var(--r);z-index:800;backdrop-filter:blur(24px);
+      box-shadow:0 16px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
+      padding:22px;opacity:0;transform:translateX(12px);transition:opacity .35s,transform .35s;
+      pointer-events:none;overflow:hidden;position:fixed}
+    .rcard.vis{opacity:1;transform:translateX(0);pointer-events:all}
+    .rcard::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+      border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.07) 0%,transparent 70%);pointer-events:none}
+    .rc-title{font-family:var(--fb);font-size:9px;font-weight:600;letter-spacing:2px;
+      text-transform:uppercase;color:var(--cyan);margin-bottom:16px}
+    .rc-journey{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+    .rc-port{flex:1}
+    .rc-pname{font-family:var(--fh);font-size:17px;font-weight:900;font-style:italic;
+      color:var(--text);letter-spacing:-.5px;line-height:1.1}
+    .rc-pcode{font-family:var(--fb);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+    .rc-arr{font-size:18px;color:var(--muted)}
+    .rc-pbox{background:rgba(255,209,102,.06);border:1px solid rgba(255,209,102,.18);
+      border-radius:var(--rs);padding:16px;text-align:center}
+    .rc-plbl{font-family:var(--fb);font-size:9px;font-weight:600;letter-spacing:2px;
+      text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .rc-pamt{font-family:var(--fh);font-size:46px;font-weight:900;font-style:italic;
+      color:var(--gold);letter-spacing:-3px;line-height:1;
+      text-shadow:0 0 40px rgba(255,209,102,.3)}
+    .rc-psub{font-family:var(--fb);font-size:11px;color:var(--muted);margin-top:4px}
+    .rc-close{position:absolute;top:16px;right:16px;width:26px;height:26px;border-radius:50%;
+      background:var(--glass);border:1px solid var(--border);color:var(--muted);font-size:13px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s}
+    .rc-close:hover{background:rgba(255,255,255,.08);color:var(--text)}
+    .bbar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:800;
+      display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);
+      border-radius:40px;padding:7px 18px;backdrop-filter:blur(16px);
+      box-shadow:0 4px 24px rgba(0,0,0,.4);pointer-events:none}
+    .bitem{display:flex;align-items:center;gap:5px;font-family:var(--fb);font-size:11px;color:var(--muted)}
+    .bdot{width:5px;height:5px;border-radius:50%;background:var(--cyan);
+      box-shadow:0 0 6px var(--cyan);animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .bsep{color:var(--border)}
+    .loader{position:fixed;inset:0;background:var(--ocean);z-index:9999;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+      transition:opacity .6s}
+    .loader.out{opacity:0;pointer-events:none}
+    .l-title{font-family:var(--fh);font-size:44px;font-weight:900;font-style:italic;
+      color:var(--text);letter-spacing:-2px}
+    .l-title em{color:var(--cyan)}
+    .l-sub{font-family:var(--fb);font-size:11px;color:var(--muted);letter-spacing:2.5px;text-transform:uppercase}
+    .lwrap{display:flex;gap:5px;align-items:flex-end;height:28px}
+    .lbar{width:4px;border-radius:2px;background:var(--cyan);opacity:.8}
+    .lbar:nth-child(1){animation:lw 1.2s .00s ease-in-out infinite}
+    .lbar:nth-child(2){animation:lw 1.2s .10s ease-in-out infinite}
+    .lbar:nth-child(3){animation:lw 1.2s .20s ease-in-out infinite}
+    .lbar:nth-child(4){animation:lw 1.2s .30s ease-in-out infinite}
+    .lbar:nth-child(5){animation:lw 1.2s .40s ease-in-out infinite}
+    .lbar:nth-child(6){animation:lw 1.2s .30s ease-in-out infinite}
+    .lbar:nth-child(7){animation:lw 1.2s .20s ease-in-out infinite}
+    @keyframes lw{0%,100%{height:5px;opacity:.3}50%{height:26px;opacity:1}}
   </style>
 </head>
 <body>
 
-<div class="app">
+<div class="loader" id="loader">
+  <div class="l-title">Ferry<em>Routes</em></div>
+  <div class="lwrap">
+    <div class="lbar"></div><div class="lbar"></div><div class="lbar"></div>
+    <div class="lbar"></div><div class="lbar"></div><div class="lbar"></div>
+    <div class="lbar"></div>
+  </div>
+  <div class="l-sub">Charting the Mediterranean</div>
+</div>
 
-  <!-- Map -->
-  <div id="map"></div>
+<div id="map"></div>
 
-  <!-- Gradient overlays -->
-  <div class="bottom-gradient"></div>
+<div class="topbar">
+  <span class="tb-brand">FerryRoutes</span>
+  <div class="tb-div"></div>
+  <div class="tb-field" id="sf-from">
+    <span class="tb-lbl">From</span>
+    <input class="tb-inp" id="inp-from" placeholder="Departure port" autocomplete="off"/>
+    <div class="tb-drop" id="drop-from"></div>
+  </div>
+  <div class="tb-arrow">⟶</div>
+  <div class="tb-field" id="sf-to">
+    <span class="tb-lbl">To</span>
+    <input class="tb-inp" id="inp-to" placeholder="Destination port" autocomplete="off"/>
+    <div class="tb-drop" id="drop-to"></div>
+  </div>
+  <div class="tb-div"></div>
+  <button class="tb-btn" onclick="doSearch()">Search →</button>
+</div>
 
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-icon">⚓</div>
-      <div>
-        <div class="brand-name">Ferry Routes</div>
-        <div class="brand-sub">Mediterranean Explorer</div>
-      </div>
-    </div>
-
-    <div class="stat-pill">
-      <div class="dot"></div>
-      <span id="stat-text">Loading…</span>
-    </div>
-
-    <div class="search-wrap">
-      <span class="search-icon">⌕</span>
-      <input class="search" id="search" type="text" placeholder="Search port…" autocomplete="off" />
-      <div class="suggestions" id="suggestions"></div>
+<div class="panel" id="panel">
+  <div class="p-head">
+    <div class="p-name" id="p-name">—</div>
+    <div class="p-tags">
+      <span class="pt-code" id="p-code">—</span>
+      <span class="pt-count" id="p-count">— routes</span>
     </div>
   </div>
-
-  <!-- Side panel -->
-  <div class="panel" id="panel">
-    <div class="panel-head">
-      <div class="panel-port" id="panel-port">Ferry Routes</div>
-      <div class="panel-meta" id="panel-meta">
-        <span>Select a port to explore</span>
-      </div>
+  <div id="p-body">
+    <div class="p-empty">
+      <div class="p-empty-ico">🧭</div>
+      <div class="p-empty-txt">Click any glowing dot<br>to explore connections</div>
     </div>
-    <div class="panel-hint" id="panel-hint">
-      Click any glowing dot on the map to see connections and indicative prices.
+  </div>
+  <div class="p-list" id="p-list" style="display:none"></div>
+</div>
+
+<div class="rcard" id="rcard" style="position:fixed;top:86px;right:18px">
+  <button class="rc-close" onclick="closeRcard()">✕</button>
+  <div class="rc-title">Route details</div>
+  <div class="rc-journey">
+    <div class="rc-port">
+      <div class="rc-pname" id="rc-fn">—</div>
+      <div class="rc-pcode" id="rc-fc">—</div>
     </div>
-    <div class="panel-list" id="panel-list" style="display:none"></div>
+    <div class="rc-arr">⟶</div>
+    <div class="rc-port" style="text-align:right">
+      <div class="rc-pname" id="rc-tn">—</div>
+      <div class="rc-pcode" id="rc-tc">—</div>
+    </div>
   </div>
-
-  <!-- Cache bar -->
-  <div class="cache-bar" id="cache-bar">Prices indicative · updated daily</div>
-
-  <!-- Loading -->
-  <div class="loading" id="loading">
-    <div class="loading-icon">⛵</div>
-    <div class="loading-text">Charting the seas…</div>
-    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  <div class="rc-pbox">
+    <div class="rc-plbl">Indicative price</div>
+    <div class="rc-pamt" id="rc-price">—</div>
+    <div class="rc-psub" id="rc-psub">per adult passenger</div>
   </div>
+</div>
 
+<div class="bbar">
+  <div class="bitem"><div class="bdot"></div><span id="bstat">Loading…</span></div>
+  <span class="bsep">|</span>
+  <div class="bitem" id="bupdated">Prices updated daily</div>
 </div>
 
 <script>
-(function () {
-  // ════════════════════════════════════════════════
-  //  CONFIG — update DATA_URL after GitHub push
-  // ════════════════════════════════════════════════
-  const DATA_URL   = 'https://raw.githubusercontent.com/1valos/ferry-data/main/data/routes.json';
-  const MAP_CENTER = [37.8, 23.5];
-  const MAP_ZOOM   = 6;
+const DATA_URL='https://raw.githubusercontent.com/1valos/ferry-data/main/data/routes.json';
+const MAP_CENTER=[37.8,23.5],MAP_ZOOM=6;
 
-  // ── Map init ──────────────────────────────────
-  const map = L.map('map', {
-    center     : MAP_CENTER,
-    zoom       : MAP_ZOOM,
-    zoomControl: false
-  });
+const map=L.map('map',{center:MAP_CENTER,zoom:MAP_ZOOM,zoomControl:false});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'© ESRI',maxZoom:13}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}',{attribution:'',maxZoom:13,opacity:.75}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© CARTO',
-    subdomains : 'abcd',
-    maxZoom    : 14
+let allPorts=[],connData={},markers={},lines=[],pins=[],selFrom=null,selTo=null;
+const $=id=>document.getElementById(id);
+
+function fmt(v){const n=parseFloat(v);if(isNaN(n))return null;return n%1===0?n.toFixed(0):n.toFixed(2)}
+
+function clearMap(){
+  lines.forEach(l=>map.removeLayer(l));pins.forEach(p=>map.removeLayer(p));
+  lines=[];pins=[];
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('active','conn'))
+}
+
+function animLine(l){setTimeout(()=>{const e=l.getElement?.();if(e)e.classList.add('route-flow')},60)}
+
+function addLine(a,b,color){
+  const l=L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color,weight:2.2,dashArray:'9 9',lineCap:'round'}).addTo(map);
+  lines.push(l);animLine(l);return l
+}
+
+function addPin(port,price){
+  const p=fmt(price);const[e,c]=p.includes('.')?p.split('.'):[p,null];
+  const pin=L.marker([port.lat,port.lon],{
+    icon:L.divIcon({
+      html:`<div class="ptag"><div class="ptag-lbl">from</div><div class="ptag-amt"><sup>€</sup>${e}${c?`<small style="font-size:10px">.${c}</small>`:''}</div></div>`,
+      className:'',iconSize:[0,0],iconAnchor:[-4,34]
+    }),zIndexOffset:500,interactive:false
   }).addTo(map);
+  pins.push(pin)
+}
 
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  // ── State ─────────────────────────────────────
-  let allPorts   = [];
-  let connData   = {};
-  let markers    = {};
-  let lines      = [];
-  let pricePins  = [];
-  let selectedPort = null;
-
-  // ── Helpers ───────────────────────────────────
-  function makeDotIcon(cls = '') {
-    const el = document.createElement('div');
-    el.className = 'fm-dot' + (cls ? ' ' + cls : '');
-    return el;
-  }
-
-  function clearSelection() {
-    lines.forEach(l => map.removeLayer(l));
-    pricePins.forEach(p => map.removeLayer(p));
-    lines = []; pricePins = [];
-    document.querySelectorAll('.fm-dot').forEach(d =>
-      d.classList.remove('active', 'connected'));
-  }
-
-  function fmtPrice(val) {
-    const n = parseFloat(val);
-    return isNaN(n) ? val : `€${n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)}`;
-  }
-
-  // ── Select a port ─────────────────────────────
-  function selectPort(port) {
-    clearSelection();
-    selectedPort = port;
-
-    const dotEl = markers[port.code]?._icon?.querySelector('.fm-dot');
-    if (dotEl) dotEl.classList.add('active');
-
-    const conns = connData[port.code] ?? [];
-
-    // Update panel header
-    document.getElementById('panel-port').textContent = port.name;
-    document.getElementById('panel-meta').innerHTML =
-      `<span>${port.code}</span><span class="sep">·</span><span>${conns.length} connection${conns.length !== 1 ? 's' : ''}</span>`;
-
-    const hint = document.getElementById('panel-hint');
-    const list = document.getElementById('panel-list');
-
-    if (!conns.length) {
-      hint.textContent = 'No connections found for this port.';
-      hint.style.display = 'flex';
-      list.style.display = 'none';
-      return;
-    }
-
-    hint.style.display = 'none';
-    list.style.display = 'block';
-    list.innerHTML = '';
-
-    conns.forEach((conn, i) => {
-      const dest = allPorts.find(p => p.code === conn.destination);
-
-      // Draw route line
-      if (dest?.lat && dest?.lon) {
-        const line = L.polyline(
-          [[port.lat, port.lon], [dest.lat, dest.lon]],
-          {
-            color  : conn.minPrice ? '#ffb340' : '#4f9eff',
-            weight : 1.5,
-            opacity: 0.35,
-            dashArray: '4 6'
-          }
-        ).addTo(map);
-        lines.push(line);
-
-        // Price bubble
-        if (conn.minPrice) {
-          const pin = L.marker([dest.lat, dest.lon], {
-            icon: L.divIcon({
-              html       : `<div class="fm-price">from ${fmtPrice(conn.minPrice)}</div>`,
-              className  : '',
-              iconSize   : [0, 0],
-              iconAnchor : [-4, 20]
-            }),
-            zIndexOffset: 600
-          }).addTo(map);
-          pricePins.push(pin);
-        }
-
-        // Highlight connected dot
-        const dEl = markers[dest.code]?._icon?.querySelector('.fm-dot');
-        if (dEl) dEl.classList.add('connected');
+function selectPort(port){
+  clearMap();closeRcard();
+  markers[port.code]?._icon?.querySelector('.pdot')?.classList.add('active');
+  const conns=connData[port.code]??[];
+  $('p-name').textContent=port.name;
+  $('p-code').textContent=port.code;
+  $('p-count').textContent=conns.length+' route'+(conns.length!==1?'s':'');
+  const body=$('p-body'),list=$('p-list');
+  if(!conns.length){
+    body.style.display='';list.style.display='none';
+    body.innerHTML='<div class="p-empty"><div class="p-empty-ico">🌊</div><div class="p-empty-txt">No connections found<br>for this port</div></div>';
+  }else{
+    body.style.display='none';list.style.display='block';list.innerHTML='';
+    conns.forEach((c,i)=>{
+      const dest=allPorts.find(p=>p.code===c.destination);
+      if(dest?.lat&&dest?.lon){
+        addLine(port,dest,c.minPrice?'rgba(255,209,102,.55)':'rgba(0,229,255,.38)');
+        if(c.minPrice)addPin(dest,c.minPrice);
+        markers[dest.code]?._icon?.querySelector('.pdot')?.classList.add('conn');
       }
-
-      // Panel row
-      const item = document.createElement('div');
-      item.className = 'conn-item';
-      item.innerHTML = `
-        <span class="conn-rank">${i + 1}</span>
-        <span class="conn-name">${conn.destinationName || conn.destination}</span>
-        ${conn.minPrice
-          ? `<span class="conn-price">from ${fmtPrice(conn.minPrice)}</span>`
-          : `<span class="conn-no-price">–</span>`}
-      `;
-      item.onclick = () => {
-        if (dest) map.flyTo([dest.lat, dest.lon], 9, { duration: 1 });
-      };
-      list.appendChild(item);
+      const row=document.createElement('div');row.className='crow';
+      const p=c.minPrice?fmt(c.minPrice):null;
+      row.innerHTML=`<span class="cnum">${String(i+1).padStart(2,'0')}</span><span class="cdest">${c.destinationName||c.destination}</span>${p?`<span class="cprice"><span class="cprice-from">from</span> €${p}</span>`:'<span class="cnoprice">–</span>'}`;
+      row.onclick=()=>dest&&map.flyTo([dest.lat,dest.lon],9,{duration:1.2});
+      list.appendChild(row);
     });
   }
+  $('panel').classList.add('vis');
+}
 
-  // ── Render ports ──────────────────────────────
-  function renderPorts() {
-    allPorts.forEach(port => {
-      if (!port.lat || !port.lon) return;
+function doSearch(){
+  if(!selFrom||!selTo)return;
+  const fp=allPorts.find(p=>p.code===selFrom),tp=allPorts.find(p=>p.code===selTo);
+  if(!fp||!tp)return;
+  clearMap();
+  addLine(fp,tp,'rgba(0,229,255,.75)');
+  [fp,tp].forEach(p=>markers[p.code]?._icon?.querySelector('.pdot')?.classList.add('active'));
+  map.flyToBounds(L.latLngBounds([[fp.lat,fp.lon],[tp.lat,tp.lon]]).pad(.4),{duration:1.5});
+  const route=(connData[fp.code]??[]).find(c=>c.destination===tp.code);
+  const rroute=(connData[tp.code]??[]).find(c=>c.destination===fp.code);
+  const price=route?.minPrice||rroute?.minPrice;
+  $('rc-fn').textContent=fp.name;$('rc-fc').textContent=fp.code;
+  $('rc-tn').textContent=tp.name;$('rc-tc').textContent=tp.code;
+  $('rc-price').textContent=price?`€${fmt(price)}`:'—';
+  $('rc-psub').textContent=price?'indicative price · per adult':'No price data available';
+  $('rcard').classList.add('vis');$('panel').classList.remove('vis');
+}
 
-      const el = makeDotIcon();
-      el.title = port.name;
+function closeRcard(){$('rcard').classList.remove('vis')}
 
-      const m = L.marker([port.lat, port.lon], {
-        icon: L.divIcon({
-          html     : el,
-          className: '',
-          iconSize : [8, 8],
-          iconAnchor: [4, 4]
-        })
-      }).addTo(map);
+function renderPorts(){
+  allPorts.forEach(port=>{
+    if(!port.lat||!port.lon)return;
+    const w=document.createElement('div');w.className='pdot';
+    w.innerHTML='<div class="pdot-ring"></div><div class="pdot-core"></div>';
+    const m=L.marker([port.lat,port.lon],{
+      icon:L.divIcon({html:w,className:'',iconSize:[10,10],iconAnchor:[5,5]})
+    }).addTo(map);
+    m.on('click',()=>selectPort(port));
+    markers[port.code]=m;
+  });
+}
 
-      m.on('click', () => selectPort(port));
-      markers[port.code] = m;
+function setupField(inpId,dropId,onSel){
+  const inp=$(inpId),drop=$(dropId);
+  inp.addEventListener('input',()=>{
+    const q=inp.value.trim().toLowerCase();
+    if(q.length<1){drop.style.display='none';return}
+    const hits=allPorts.filter(p=>p.name.toLowerCase().includes(q)||p.code.toLowerCase().startsWith(q)).slice(0,8);
+    if(!hits.length){drop.style.display='none';return}
+    drop.innerHTML=hits.map(p=>`<div class="ditem" data-code="${p.code}"><span class="dcode">${p.code}</span><span class="dname">${p.name}</span><span class="dcountry">${p.countryName||''}</span></div>`).join('');
+    drop.style.display='block';
+  });
+  drop.addEventListener('click',e=>{
+    const item=e.target.closest('.ditem');if(!item)return;
+    const port=allPorts.find(p=>p.code===item.dataset.code);if(!port)return;
+    inp.value=port.name;drop.style.display='none';onSel(port.code);
+  });
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});
+}
+
+async function load(){
+  try{
+    const res=await fetch(DATA_URL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    allPorts=data.ports??[];connData=data.connections??{};
+    const d=new Date(data.fetchedAt);
+    $('bstat').textContent=allPorts.length+' ports';
+    $('bupdated').textContent='Updated '+d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    renderPorts();
+    setupField('inp-from','drop-from',code=>{selFrom=code});
+    setupField('inp-to','drop-to',code=>{selTo=code});
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('#sf-from'))$('drop-from').style.display='none';
+      if(!e.target.closest('#sf-to'))$('drop-to').style.display='none';
     });
+    setTimeout(()=>{$('loader').classList.add('out');setTimeout(()=>$('loader').remove(),700)},900);
+  }catch(err){
+    $('loader').querySelector('.l-sub').textContent='Failed to load data';
+    console.error(err);
   }
-
-  // ── Load data ─────────────────────────────────
-  async function load() {
-    try {
-      const res  = await fetch(DATA_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      allPorts = data.ports ?? [];
-      connData = data.connections ?? {};
-
-      const d = new Date(data.fetchedAt);
-      document.getElementById('stat-text').textContent =
-        `${allPorts.length} ports loaded`;
-      document.getElementById('cache-bar').textContent =
-        `Prices indicative · last updated ${d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
-
-      renderPorts();
-
-      // Fade out loading screen
-      const loading = document.getElementById('loading');
-      loading.classList.add('out');
-      setTimeout(() => loading.remove(), 600);
-
-    } catch (err) {
-      document.querySelector('.loading-text').textContent = 'Could not load ferry data';
-      document.querySelector('.loading-bar').style.display = 'none';
-      console.error('[FerryMap]', err);
-    }
-  }
-
-  // ── Search ────────────────────────────────────
-  const searchEl  = document.getElementById('search');
-  const suggestEl = document.getElementById('suggestions');
-
-  searchEl.addEventListener('input', () => {
-    const q = searchEl.value.trim().toLowerCase();
-    if (q.length < 2) { suggestEl.style.display = 'none'; return; }
-
-    const hits = allPorts
-      .filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q))
-      .slice(0, 7);
-
-    if (!hits.length) { suggestEl.style.display = 'none'; return; }
-
-    suggestEl.innerHTML = hits.map(p => `
-      <div class="suggestion" data-code="${p.code}">
-        <span class="suggestion-code">${p.code}</span>
-        <span class="suggestion-name">${p.name}</span>
-      </div>
-    `).join('');
-    suggestEl.style.display = 'block';
-  });
-
-  suggestEl.addEventListener('click', e => {
-    const code = e.target.closest('.suggestion')?.dataset.code;
-    if (!code) return;
-    const port = allPorts.find(p => p.code === code);
-    if (!port) return;
-    searchEl.value = port.name;
-    suggestEl.style.display = 'none';
-    map.flyTo([port.lat, port.lon], 9, { duration: 1.2 });
-    selectPort(port);
-  });
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.search-wrap')) suggestEl.style.display = 'none';
-  });
-
-  // ── Boot ──────────────────────────────────────
-  load();
-})();
+}
+load();
 </script>
 </body>
 </html>
