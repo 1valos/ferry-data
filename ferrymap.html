@@ -18,7 +18,7 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow:hidden;background:var(--ocean);font-family:var(--fb)}
     #map{position:fixed;inset:0;z-index:1}
-    .leaflet-tile-pane{filter:saturate(1.5) brightness(1.12)}
+    .leaflet-tile-pane{filter:saturate(1.2) brightness(0.72) contrast(1.05)}
     .leaflet-container{background:#06101e!important}
     .leaflet-control-zoom{border:none!important;box-shadow:none!important}
     .leaflet-control-zoom a{
@@ -31,29 +31,49 @@
     .route-flow{animation:dashFlow 2s linear infinite}
     @keyframes dashFlow{from{stroke-dashoffset:0}to{stroke-dashoffset:-32}}
     .pdot{position:relative;cursor:pointer;width:10px;height:10px}
-    .pdot-ring{position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(0,229,255,.2);animation:portRing 3s ease-out infinite}
-    @keyframes portRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.4);opacity:0}}
-    .pdot-core{width:10px;height:10px;border-radius:50%;position:relative;z-index:1;
-      background:var(--cyan);border:2px solid rgba(0,229,255,.2);
-      box-shadow:0 0 10px rgba(0,229,255,.5),0 0 22px rgba(0,229,255,.15);
+    .pdot-ring{position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(255,100,80,.3);animation:none}
+    @keyframes portRing{0%{transform:scale(1);opacity:.5}100%{transform:scale(2);opacity:0}}
+    .pdot-core{will-change:transform}
+    .pdot-core{width:11px;height:11px;border-radius:50%;position:relative;z-index:1;
+      background:#ff6450;border:2.5px solid rgba(255,255,255,.9);
+      box-shadow:0 0 0 1px rgba(255,100,80,.4),0 2px 8px rgba(0,0,0,.5),0 0 16px rgba(255,100,80,.4);
       transition:transform .2s,box-shadow .2s,background .2s}
+    .pdot:hover .pdot-ring,.pdot.active .pdot-ring{animation:portRing 1.5s ease-out infinite}
+    .pdot.conn .pdot-ring{animation:none}
+    .pdot.conn:hover .pdot-ring{animation:portRing 1.5s ease-out infinite}
     .pdot:hover .pdot-core,.pdot.active .pdot-core{
-      transform:scale(1.7);background:#fff;
-      box-shadow:0 0 20px rgba(0,229,255,.9),0 0 40px rgba(0,229,255,.35);border-color:var(--cyan)}
-    .pdot.conn .pdot-core{background:var(--gold);border-color:rgba(255,209,102,.3);
-      box-shadow:0 0 10px rgba(255,209,102,.6),0 0 22px rgba(255,209,102,.2)}
-    .pdot.conn .pdot-ring{border-color:rgba(255,209,102,.25)}
+      transform:scale(1.7);background:#fff;border-color:#ff6450;
+      box-shadow:0 0 0 2px rgba(255,100,80,.6),0 0 20px rgba(255,100,80,.8),0 0 40px rgba(255,100,80,.3)}
+    .pdot.conn .pdot-core{background:var(--gold);border-color:rgba(255,255,255,.9);
+      box-shadow:0 0 0 1px rgba(255,209,102,.5),0 2px 8px rgba(0,0,0,.4),0 0 16px rgba(255,209,102,.5)}
+    .pdot.conn .pdot-ring{border-color:rgba(255,209,102,.4)}
     .pdot.conn:hover .pdot-core{background:#fff;border-color:var(--gold);
-      box-shadow:0 0 20px rgba(255,209,102,.9),0 0 40px rgba(255,209,102,.35)}
-    .ptag{background:rgba(6,14,28,.97);border:1px solid rgba(255,209,102,.3);
-      border-radius:11px;padding:5px 12px 7px;pointer-events:none;
-      backdrop-filter:blur(12px);box-shadow:0 6px 28px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
-      white-space:nowrap;text-align:center}
-    .ptag-lbl{font-family:var(--fb);font-size:8px;font-weight:600;letter-spacing:1.5px;
-      text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-    .ptag-amt{font-family:var(--fh);font-size:18px;font-weight:900;color:var(--gold);
-      letter-spacing:-1px;line-height:1;font-style:italic}
-    .ptag-amt sup{font-size:10px;font-weight:400;vertical-align:super;margin-right:1px;font-style:normal}
+      box-shadow:0 0 0 2px rgba(255,209,102,.7),0 0 20px rgba(255,209,102,.9),0 0 40px rgba(255,209,102,.3)}
+    .ptag{
+      background:rgba(6,12,24,.96);
+      border:1px solid rgba(255,209,102,.35);
+      border-radius:10px;
+      padding:6px 11px 7px;
+      pointer-events:none;
+      backdrop-filter:blur(16px);
+      box-shadow:0 4px 18px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.07);
+      white-space:nowrap;text-align:center;position:relative;
+      min-width:64px}
+    .ptag::after{
+      content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);
+      width:0;height:0;
+      border-left:5px solid transparent;border-right:5px solid transparent;
+      border-top:5px solid rgba(255,209,102,.35)}
+    .ptag-island{
+      font-family:var(--fb);font-size:10px;font-weight:500;
+      color:rgba(255,255,255,.5);letter-spacing:.3px;
+      text-transform:uppercase;margin-bottom:2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+    .ptag-lbl{display:none}
+    .ptag-amt{
+      font-family:var(--fh);font-size:16px;font-weight:900;color:var(--gold);
+      letter-spacing:-.5px;line-height:1;font-style:italic;white-space:nowrap}
+    .ptag-amt sup{font-size:9px;font-weight:400;vertical-align:super;margin-right:1px;font-style:normal;opacity:.85}
     .topbar{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:900;
       display:flex;align-items:center;gap:0;background:var(--panel);border:1px solid var(--b2);
       border-radius:50px;padding:5px 5px 5px 22px;backdrop-filter:blur(24px);
@@ -144,6 +164,36 @@
       color:var(--gold);letter-spacing:-3px;line-height:1;
       text-shadow:0 0 40px rgba(255,209,102,.3)}
     .rc-psub{font-family:var(--fb);font-size:11px;color:var(--muted);margin-top:4px}
+    .rc-ops{margin-top:14px}
+    .rc-ops-title{
+      font-family:var(--fb);font-size:9px;font-weight:600;letter-spacing:2px;
+      text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .rc-op-row{
+      display:flex;align-items:center;gap:10px;
+      padding:8px 12px;border-radius:8px;
+      background:rgba(255,255,255,.03);border:1px solid var(--border);
+      margin-bottom:5px;transition:background .15s}
+    .rc-op-row:hover{background:rgba(255,255,255,.06)}
+    .rc-op-icon{font-size:15px;flex-shrink:0}
+    .rc-op-name{font-family:var(--fb);font-size:12px;color:var(--sub);flex:1;font-weight:500}
+    .rc-op-price{
+      font-family:var(--fh);font-size:13px;font-weight:900;font-style:italic;
+      color:var(--gold);letter-spacing:-.3px}
+    .rc-op-badge{
+      font-family:var(--fb);font-size:9px;font-weight:600;letter-spacing:.5px;
+      text-transform:uppercase;padding:2px 6px;border-radius:4px;
+      background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.2);
+      white-space:nowrap}
+    .rc-book{
+      display:block;width:100%;margin-top:14px;
+      background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+      border:none;border-radius:10px;padding:15px;
+      font-family:'Outfit',sans-serif;font-size:17px;font-weight:600;
+      color:var(--ocean);text-align:center;text-decoration:none;
+      letter-spacing:.5px;cursor:pointer;
+      transition:opacity .2s,transform .2s,box-shadow .2s;
+      box-shadow:0 0 24px rgba(0,229,255,.3)}
+    .rc-book:hover{opacity:.9;transform:translateY(-2px);box-shadow:0 6px 32px rgba(0,229,255,.55)}
     .rc-close{position:absolute;top:16px;right:16px;width:26px;height:26px;border-radius:50%;
       background:var(--glass);border:1px solid var(--border);color:var(--muted);font-size:13px;
       cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s}
@@ -245,6 +295,13 @@
     <div class="rc-pamt" id="rc-price">—</div>
     <div class="rc-psub" id="rc-psub">per adult passenger</div>
   </div>
+  <div class="rc-ops" id="rc-ops" style="display:none">
+    <div class="rc-ops-title">Operators on this route</div>
+    <div id="rc-ops-list"></div>
+  </div>
+  <a class="rc-book" href="https://www.ferries.gr/en/booking/" target="_blank" rel="noopener">
+    Book Now →
+  </a>
 </div>
 
 <div class="bbar">
@@ -273,19 +330,48 @@ function clearMap(){
   document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('active','conn'))
 }
 
-function animLine(l){setTimeout(()=>{const e=l.getElement?.();if(e)e.classList.add('route-flow')},60)}
+function animLine(l){setTimeout(()=>{const e=l.getElement?.();if(e){e.classList.add('route-flow');e.style.filter='drop-shadow(0 0 3px rgba(255,160,50,.6))'}},60)}
 
-function addLine(a,b,color){
-  const l=L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color,weight:2.2,dashArray:'9 9',lineCap:'round'}).addTo(map);
-  lines.push(l);animLine(l);return l
+function curvedLatLngs(a, b, offset=0.15){
+  // Create a curved arc between two points by offsetting a midpoint perpendicular to the line
+  const pts = [];
+  const n = 40;
+  const lat1=a.lat, lon1=a.lon, lat2=b.lat, lon2=b.lon;
+  const mlat=(lat1+lat2)/2, mlon=(lon1+lon2)/2;
+  // Perpendicular offset: rotate 90 degrees and scale
+  const dlat=lat2-lat1, dlon=lon2-lon1;
+  const dist=Math.sqrt(dlat*dlat+dlon*dlon);
+  const clat=mlat + (-dlon/dist)*offset*dist;
+  const clon=mlon + (dlat/dist)*offset*dist;
+  // Quadratic bezier interpolation
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const lt=(1-t)*(1-t)*lat1 + 2*(1-t)*t*clat + t*t*lat2;
+    const ln=(1-t)*(1-t)*lon1 + 2*(1-t)*t*clon + t*t*lon2;
+    pts.push([lt,ln]);
+  }
+  return pts;
+}
+
+function addLine(a, b, color, isSearch=false){
+  const weight   = isSearch ? 3.5 : 2.2;
+  const opacity  = isSearch ? 0.9 : 0.65;
+  const dashArr  = isSearch ? '10 6' : '8 8';
+  const useColor = isSearch ? '#ff9500' : color;
+  const pts = curvedLatLngs(a, b, isSearch ? 0.18 : 0.12);
+  const l = L.polyline(pts, {
+    color: useColor, weight, opacity, dashArray: dashArr, lineCap:'round', lineJoin:'round'
+  }).addTo(map);
+  lines.push(l); animLine(l); return l;
 }
 
 function addPin(port,price){
   const p=fmt(price);const[e,c]=p.includes('.')?p.split('.'):[p,null];
+  const name=port.name||port.code||'';
   const pin=L.marker([port.lat,port.lon],{
     icon:L.divIcon({
-      html:`<div class="ptag"><div class="ptag-lbl">from</div><div class="ptag-amt"><sup>€</sup>${e}${c?`<small style="font-size:10px">.${c}</small>`:''}</div></div>`,
-      className:'',iconSize:[0,0],iconAnchor:[-4,34]
+      html:`<div class="ptag"><div class="ptag-island">${name}</div><div class="ptag-amt"><sup>€</sup>${e}${c?`<small style="font-size:10px">.${c}</small>`:''}</div></div>`,
+      className:'',iconSize:[0,0],iconAnchor:[40,52]
     }),zIndexOffset:500,interactive:false
   }).addTo(map);
   pins.push(pin)
@@ -307,7 +393,7 @@ function selectPort(port){
     conns.forEach((c,i)=>{
       const dest=allPorts.find(p=>p.code===c.destination);
       if(dest?.lat&&dest?.lon){
-        addLine(port,dest,c.minPrice?'rgba(255,209,102,.55)':'rgba(0,229,255,.38)');
+        addLine(port,dest,c.minPrice?'rgba(255,185,50,.7)':'rgba(0,229,255,.5)');
         if(c.minPrice)addPin(dest,c.minPrice);
         markers[dest.code]?._icon?.querySelector('.pdot')?.classList.add('conn');
       }
@@ -326,7 +412,7 @@ function doSearch(){
   const fp=allPorts.find(p=>p.code===selFrom),tp=allPorts.find(p=>p.code===selTo);
   if(!fp||!tp)return;
   clearMap();
-  addLine(fp,tp,'rgba(0,229,255,.75)');
+  addLine(fp,tp,'#ff9500',true);
   [fp,tp].forEach(p=>markers[p.code]?._icon?.querySelector('.pdot')?.classList.add('active'));
   map.flyToBounds(L.latLngBounds([[fp.lat,fp.lon],[tp.lat,tp.lon]]).pad(.4),{duration:1.5});
   const route=(connData[fp.code]??[]).find(c=>c.destination===tp.code);
@@ -336,6 +422,24 @@ function doSearch(){
   $('rc-tn').textContent=tp.name;$('rc-tc').textContent=tp.code;
   $('rc-price').textContent=price?`€${fmt(price)}`:'—';
   $('rc-psub').textContent=price?'indicative price · per adult':'No price data available';
+
+  // Show operators
+  const operators = route?.operators || rroute?.operators || [];
+  const opsList   = $('rc-ops-list');
+  const opsWrap   = $('rc-ops');
+  if(operators.length){
+    opsList.innerHTML = operators.map((op, i) => `
+      <div class="rc-op-row">
+        <span class="rc-op-icon">⛴</span>
+        <span class="rc-op-name">${op.name}</span>
+        ${i===0 ? '<span class="rc-op-badge">Cheapest</span>' : ''}
+        <span class="rc-op-price">€${fmt(op.price)}</span>
+      </div>`).join('');
+    opsWrap.style.display = 'block';
+  } else {
+    opsWrap.style.display = 'none';
+  }
+
   $('rcard').classList.add('vis');$('panel').classList.remove('vis');
 }
 
